@@ -1,0 +1,63 @@
+// refernece stack overflow
+
+// link http://stackoverflow.com/questions/12038380/how-to-define-unidirectional-onetomany-relationship-in-jpa
+.........................................
+
+My bible for JPA work is the Java Persistence wikibook. It has a section on unidirectional OneToMany which explains how to do this with a @JoinColumn annotation. In your case, i think you would want:
+
+@OneToMany
+@JoinColumn(name="TXTHEAD_CODE")
+private Set<Text> text;
+I've used a Set rather than a List, because the data itself is not ordered.
+
+The above is using a defaulted referencedColumnName, unlike the example in the wikibook. If that doesn't work, try an explicit one:
+
+@OneToMany
+@JoinColumn(name="TXTHEAD_CODE", referencedColumnName="DATREG_META_CODE")
+private Set<Text> text;
+..............................................
+..........................................................................
+
+link stackoverflow
+
+source:http://stackoverflow.com/questions/11938253/jpa-joincolumn-vs-mappedby
+
+@JoinColumn could be used on both sides of the relationship. The question was about using @JoinColumn on the @OneToMany side (rare case). And the point here is in physical information duplication (column name) along with not optimized SQL query that will produce some additional UPDATE statements.
+
+According to documentation:
+
+Since many to one are (almost) always the owner side of a bidirectional relationship in the JPA spec, the one to many association is annotated by @OneToMany(mappedBy=...)
+
+@Entity
+public class Troop {
+    @OneToMany(mappedBy="troop")
+    public Set<Soldier> getSoldiers() {
+    ...
+}
+
+@Entity
+public class Soldier {
+    @ManyToOne
+    @JoinColumn(name="troop_fk")
+    public Troop getTroop() {
+    ...
+} 
+Troop has a bidirectional one to many relationship with Soldier through the troop property. You don't have to (must not) define any physical mapping in the mappedBy side.
+
+To map a bidirectional one to many, with the one-to-many side as the owning side, you have to remove the mappedBy element and set the many to one @JoinColumn as insertable and updatable to false. This solution is not optimized and will produce some additional UPDATE statements.
+
+@Entity
+public class Troop {
+    @OneToMany
+    @JoinColumn(name="troop_fk") //we need to duplicate the physical information
+    public Set<Soldier> getSoldiers() {
+    ...
+}
+
+@Entity
+public class Soldier {
+    @ManyToOne
+    @JoinColumn(name="troop_fk", insertable=false, updatable=false)
+    public Troop getTroop() {
+    ...
+}
